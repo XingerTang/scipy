@@ -6948,7 +6948,7 @@ class lognorm_gen(rv_continuous):
         estimation of the log-normal shape and scale parameters, so the
         `optimizer`, `loc` and `scale` keyword arguments are ignored.
         If the location is free, a likelihood maximum is found by
-        setting its partial derivative wrt to location to 0, and
+        setting its partial derivative w.r.t. location to 0, and
         solving by substituting the analytical expressions of shape
         and scale (or provided parameters).
         See, e.g., equation 3.1 in
@@ -8310,7 +8310,7 @@ class pareto_gen(rv_continuous):
 
             def fun_to_solve(scale):
                 # optimize the scale by setting the partial derivatives
-                # w.r.t. to location and scale equal and solving.
+                # w.r.t. location and scale equal and solving.
                 location = np.min(data) - scale
                 shape = fshape or get_shape(scale, location)
                 return dL_dLocation(shape, location) - dL_dScale(shape, scale)
@@ -8849,7 +8849,7 @@ class powerlaw_gen(rv_continuous):
 
         def fun_to_solve(loc):
             # optimize the location by setting the partial derivatives
-            # w.r.t. to location and scale equal and solving.
+            # w.r.t. location and scale equal and solving.
             scale = np.nextafter(get_scale(data, loc), -np.inf)
             shape = fshape or get_shape(data, loc, scale)
             return (dL_dScale(data, shape, scale)
@@ -10926,11 +10926,27 @@ class FitUniformFixedScaleDataError(FitDataError):
 class uniform_gen(rv_continuous):
     r"""A uniform continuous random variable.
 
+    %(before_notes)s
+
+    Notes
+    -----
+    The probability density function for `uniform` is:
+
+    .. math::
+
+        f(x) = \begin{cases}
+                 1  & \text{for } 0 \le x \le 1 \\
+                 0  & \text{otherwise}
+               \end{cases}
+
     In the standard form, the distribution is uniform on ``[0, 1]``. Using
     the parameters ``loc`` and ``scale``, one obtains the uniform distribution
     on ``[loc, loc + scale]``.
 
-    %(before_notes)s
+    References
+    ----------
+    .. [1] "Continuous uniform distribution", Wikipedia,
+           https://en.wikipedia.org/wiki/Continuous_uniform_distribution
 
     %(example)s
 
@@ -11142,6 +11158,13 @@ class vonmises_gen(rv_continuous):
     ``kappa`` as a shape parameter (concentration) and ``loc`` as the location
     (circular mean). A ``scale`` parameter is accepted but does not have any
     effect.
+
+    References
+    ----------
+    .. [1] Mardia, K. V. and Jupp, P. E. *Directional Statistics*.
+           John Wiley & Sons, 1999, p. 36.
+    .. [2] "von Mises distribution", Wikipedia,
+           https://en.wikipedia.org/wiki/Von_Mises_distribution
 
     Examples
     --------
@@ -11651,6 +11674,9 @@ class halfgennorm_gen(rv_continuous):
 
     def _isf(self, x, beta):
         return sc.gammainccinv(1.0/beta, x)**(1.0/beta)
+
+    def _munp(self, n, beta):
+        return sc.poch(1/beta, n/beta)
 
     def _entropy(self, beta):
         return 1.0/beta - np.log(beta) + sc.gammaln(1.0/beta)

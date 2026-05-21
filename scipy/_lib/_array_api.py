@@ -653,8 +653,8 @@ def concat_1d(xp: ModuleType | None, *arrays: Iterable[ArrayLike]) -> Array:
     """A replacement for `np.r_` as `xp.concat` does not accept python scalars
        or 0-D arrays.
     """
-    arys = [xpx.atleast_nd(xp.asarray(a), ndim=1, xp=xp) for a in arrays]
-    return xp.concat(arys)
+    arys = [xpx.atleast_nd(xp.asarray(a), ndim=1, xp=xp) for a in arrays]  # type:ignore[union-attr]
+    return xp.concat(arys)  # type:ignore[union-attr]
 
 
 ### MArray Helpers ###
@@ -927,9 +927,10 @@ def xp_capabilities(
         # Don't use a wrapper, as in some cases @xp_capabilities is
         # applied to a ufunc
         capabilities_table[f] = capabilities
-        note = _make_capabilities_note(f.__name__, sphinx_capabilities, extra_note)
         doc = FunctionDoc(f)
-        doc['Notes'].append(note)
+        if not np_only or out_of_scope:
+            note = _make_capabilities_note(f.__name__, sphinx_capabilities, extra_note)
+            doc['Notes'].append(note)
         doc = str(doc).split("\n", 1)[1].lstrip(" \n")  # remove signature
         try:
             f.__doc__ = doc

@@ -20,7 +20,7 @@ import numpy as np
 from numpy import (array, isfinite, inexact, nonzero, iscomplexobj,
                    asarray, argsort, empty, iscomplex, zeros, einsum, eye, inf)
 # Local imports
-from scipy._lib._util import _asarray_validated, _apply_over_batch
+from scipy._lib._util import _asarray_validated, _apply_over_batch, _deprecate_dtypes
 from ._misc import LinAlgError, _datacopied
 from scipy.linalg._misc import norm   # noqa: F401  (backwards compat)
 from .lapack import (
@@ -90,8 +90,10 @@ def eig(a, b=None, left=False, right=True, overwrite_a=False,
         Whether to calculate and return right eigenvectors.  Default is True.
     overwrite_a : bool, optional
         Whether to overwrite `a`; may improve performance.  Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     overwrite_b : bool, optional
         Whether to overwrite `b`; may improve performance.  Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrices contain only finite numbers.
         Disabling may give a performance gain, but may result in problems
@@ -209,6 +211,7 @@ def eig(a, b=None, left=False, right=True, overwrite_a=False,
     """
     # basic sanity checks of the input matrix
     a1 = _asarray_validated(a, check_finite=check_finite)
+    _deprecate_dtypes("eig", a1)
 
     if len(a1.shape) < 2 or a1.shape[-1] != a1.shape[-2]:
         raise ValueError(
@@ -251,6 +254,8 @@ def eig(a, b=None, left=False, right=True, overwrite_a=False,
         # b is not None: generalized eigenvalue problem
 
         b1 = _asarray_validated(b, check_finite=check_finite)
+        _deprecate_dtypes("eig", b1)
+
         a1, b1 = _ensure_dtype_cdsz(a1, b1)  # NB: makes a1.dtype == b1.dtype, if needed
         b1, overwrite_b = _ensure_aligned_and_native(b1, overwrite_b)
 
@@ -338,8 +343,10 @@ def eigh(a, b=None, *, lower=True, eigvals_only=False, overwrite_a=False,
         (Default: both are calculated)
     overwrite_a : bool, optional
         Whether to overwrite data in ``a`` (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     overwrite_b : bool, optional
         Whether to overwrite data in ``b`` (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     type : int, optional
         For the generalized problems, this keyword specifies the problem type
         to be solved for ``w`` and ``v`` (only takes 1, 2, 3 as possible
@@ -722,6 +729,7 @@ def eig_banded(a_band, lower=False, eigvals_only=False, overwrite_a_band=False,
         (Default: calculate also eigenvectors)
     overwrite_a_band : bool, optional
         Discard data in a_band (may enhance performance)
+        See :ref:`tutorial_linalg_overwrite` for details.
     select : {'a', 'v', 'i'}, optional
         Which eigenvalues to calculate
 
@@ -858,7 +866,7 @@ def eig_banded(a_band, lower=False, eigvals_only=False, overwrite_a_band=False,
     return w, v
 
 
-def eigvals(a, b=None, overwrite_a=False, check_finite=True,
+def eigvals(a, b=None, overwrite_a=False, overwrite_b=False, check_finite=True,
             homogeneous_eigvals=False):
     r"""
     Compute eigenvalues from an ordinary or generalized eigenvalue problem.
@@ -876,7 +884,10 @@ def eigvals(a, b=None, overwrite_a=False, check_finite=True,
         Right-hand side matrix (or a stack of matrices) in a generalized eigenvalue
         problem. If omitted (default), identity matrix is assumed.
     overwrite_a : bool, optional
-        Whether to overwrite data in a (may improve performance)
+        Whether to overwrite data in a (may improve performance). Default is False.
+    overwrite_b : bool, optional
+        Whether to overwrite data in b (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrices contain only finite numbers.
         Disabling may give a performance gain, but may result in problems
@@ -952,8 +963,8 @@ def eigvals(a, b=None, overwrite_a=False, check_finite=True,
            [2.+0.j, 2.+0.j, 2.+0.j]])
     """
     return eig(a, b=b, left=0, right=0, overwrite_a=overwrite_a,
-               check_finite=check_finite,
-               homogeneous_eigvals=homogeneous_eigvals)
+                overwrite_b=overwrite_b, check_finite=check_finite,
+                homogeneous_eigvals=homogeneous_eigvals)
 
 
 @_apply_over_batch(('a', 2), ('b', 2))
@@ -986,11 +997,12 @@ def eigvalsh(a, b=None, *, lower=True, overwrite_a=False,
         Whether the pertinent array data is taken from the lower or upper
         triangle of ``a`` and, if applicable, ``b``. (Default: lower)
     overwrite_a : bool, optional
-        Whether to overwrite data in ``a`` (may improve performance). Default
-        is False.
+        Whether to overwrite data in ``a`` (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     overwrite_b : bool, optional
         Whether to overwrite data in ``b`` (may improve performance). Default
         is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     type : int, optional
         For the generalized problems, this keyword specifies the problem type
         to be solved for ``w`` and ``v`` (only takes 1, 2, 3 as possible
@@ -1116,6 +1128,7 @@ def eigvals_banded(a_band, lower=False, overwrite_a_band=False,
         Is the matrix in the lower form. (Default is upper form)
     overwrite_a_band : bool, optional
         Discard data in a_band (may enhance performance)
+        See :ref:`tutorial_linalg_overwrite` for details.
     select : {'a', 'v', 'i'}, optional
         Which eigenvalues to calculate
 
@@ -1463,8 +1476,8 @@ def hessenberg(a, calc_q=False, overwrite_a=False, check_finite=True):
     calc_q : bool, optional
         Whether to compute the transformation matrix.  Default is False.
     overwrite_a : bool, optional
-        Whether to overwrite `a`; may improve performance.
-        Default is False.
+        Whether to overwrite `a`; may improve performance. Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrix contains only finite numbers.
         Disabling may give a performance gain, but may result in problems
@@ -1555,7 +1568,7 @@ def cdf2rdf(w, v):
     Array argument(s) of this function may have additional
     "batch" dimensions prepended to the core shape. In this case, the array is treated
     as a batch of lower-dimensional slices; see :ref:`linalg_batch` for details.
-    
+
     Parameters
     ----------
     w : (..., M) array_like
@@ -1627,6 +1640,7 @@ def cdf2rdf(w, v):
            [ 0.     , -3.23942,  2.59153]])
     """
     w, v = _asarray_validated(w), _asarray_validated(v)
+    _deprecate_dtypes("cdf2rdf", w, v)
 
     # check dimensions
     if w.ndim < 1:

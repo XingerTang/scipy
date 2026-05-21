@@ -2325,7 +2325,7 @@ class TestFactorialFunctions:
         "n",
         [
             np.nan, np.float64("nan"), np.nan + np.nan*1j, np.complex128("nan+nanj"),
-            np.inf, np.inf + 0j, -np.inf, -np.inf + 0j, None, np.datetime64("nat")
+            np.inf, np.inf + 0j, -np.inf, -np.inf + 0j, None, np.datetime64("nat", "s")
         ],
         ids=[
             "NaN", "np.float64('nan')", "NaN+i*NaN", "np.complex128('nan+nanj')",
@@ -2944,7 +2944,7 @@ class TestFactorialFunctions:
     @pytest.mark.parametrize("exact,extend",
                              [(True, "zero"), (False, "zero"), (False, "complex")])
     # neither integer, float nor complex
-    @pytest.mark.parametrize("k", ["string", np.datetime64("nat")],
+    @pytest.mark.parametrize("k", ["string", np.datetime64("nat", "s")],
                              ids=["string", "NaT"])
     def test_factorialk_raises_k_other(self, k, exact, extend, boxed):
         n = [1] if boxed else 1
@@ -3981,6 +3981,17 @@ class TestBessel:
         y = (special.iv(0,2) + special.iv(2,2))/2
         x = special.ivp(1,2)
         assert_allclose(x, y, atol=1.5e-10, rtol=0)
+
+    @pytest.mark.parametrize("x, expected",
+        [(1e15, 6.156638646885021e-09),  # 1/sqrt(eps) < x < 1/eps
+         (1e30, -5.589003016686147e-16)  # x > 1/eps
+        ])
+    def test_gh22705(self, x, expected):
+        # reference values computed with mpmath
+        # from mpmath import mp
+        # mp.dps = 1000
+        # float(mp.besselj(0, mp.mpf('1e15')))
+        assert_allclose(special.j0(x), expected, rtol=5e-15)
 
 
 class TestLaguerre:

@@ -1,7 +1,7 @@
 """SVD decomposition functions."""
 import numpy as np
 
-from scipy._lib._util import _apply_over_batch
+from scipy._lib._util import _apply_over_batch, _deprecate_dtypes
 from . import _batched_linalg
 
 # Local imports.
@@ -56,8 +56,8 @@ def svd(a, full_matrices=True, compute_uv=True, overwrite_a=False,
         Whether to compute also ``U`` and ``Vh`` in addition to ``s``.
         Default is True.
     overwrite_a : bool, optional
-        Whether to overwrite `a`; may improve performance.
-        Default is False.
+        Whether to overwrite data in `a` (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrix contains only finite numbers.
         Disabling may give a performance gain, but may result in problems
@@ -149,6 +149,7 @@ def svd(a, full_matrices=True, compute_uv=True, overwrite_a=False,
 
     # basic sanity checks of the input matrix
     a1 = _asarray_validated(a, check_finite=check_finite)
+    _deprecate_dtypes("svd", a1)
 
     if a1.ndim < 2:
         raise ValueError(f"Expected at least ndim=2, got {a1.ndim=}")
@@ -220,8 +221,8 @@ def svdvals(a, overwrite_a=False, check_finite=True):
     a : (M, N) array_like
         Matrix to decompose.
     overwrite_a : bool, optional
-        Whether to overwrite `a`; may improve performance.
-        Default is False.
+        Whether to overwrite data in `a` (may improve performance). Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrix contains only finite numbers.
         Disabling may give a performance gain, but may result in problems
@@ -417,8 +418,8 @@ def null_space(A, rcond=None, *, overwrite_a=False, check_finite=True,
         ``rcond * max(s)`` are considered zero.
         Default: floating point eps * max(M,N).
     overwrite_a : bool, optional
-        Whether to overwrite `a`; may improve performance.
-        Default is False.
+        Whether to overwrite `a`; may improve performance. Default is False.
+        See :ref:`tutorial_linalg_overwrite` for details.
     check_finite : bool, optional
         Whether to check that the input matrix contains only finite numbers.
         Disabling may give a performance gain, but may result in problems

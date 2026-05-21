@@ -122,8 +122,9 @@ def correlate(in1, in2, mode='full', method='auto'):
            rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
            must be at least as large as the other in every dimension.
         ``same``
-           The output is the same size as `in1`, centered
+           Output size will be ``N``, the same size as `in1`, centered
            with respect to the 'full' output.
+           Boundary effects may be visible.
     method : str {'auto', 'direct', 'fft'}, optional
         A string indicating which method to use to calculate the correlation.
 
@@ -615,8 +616,9 @@ def fftconvolve(in1, in2, mode="full", axes=None):
            rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
            must be at least as large as the other in every dimension.
         ``same``
-           The output is the same size as `in1`, centered
+           Output size will be ``N``, the same size as `in1`, centered
            with respect to the 'full' output.
+           Boundary effects may be visible.
     axes : int or array_like of ints or None, optional
         Axes over which to compute the convolution.
         The default is over all axes.
@@ -626,6 +628,13 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     out : array
         An N-dimensional array containing a subset of the discrete linear
         convolution of `in1` with `in2`.
+
+        The output size along each axis depends on ``mode``. For input
+        sizes ``N`` and ``M`` along a given axis:
+
+        - ``full`` : ``N + M - 1``
+        - ``same`` : ``N`` (same as the size of `in1`)
+        - ``valid`` : ``max(N, M) - min(N, M) + 1``
 
     See Also
     --------
@@ -867,8 +876,9 @@ def oaconvolve(in1, in2, mode="full", axes=None):
            rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
            must be at least as large as the other in every dimension.
         ``same``
-           The output is the same size as `in1`, centered
+           Output size will be ``N``, the same size as `in1`, centered
            with respect to the 'full' output.
+           Boundary effects may be visible.
     axes : int or array_like of ints or None, optional
         Axes over which to compute the convolution.
         The default is over all axes.
@@ -878,6 +888,13 @@ def oaconvolve(in1, in2, mode="full", axes=None):
     out : array
         An N-dimensional array containing a subset of the discrete linear
         convolution of `in1` with `in2`.
+
+        The output size along each axis depends on ``mode``. For input
+        sizes ``N`` and ``M`` along a given axis:
+
+        - ``full`` : ``N + M - 1``
+        - ``same`` : ``N`` (same as the size of `in1`)
+        - ``valid`` : ``max(N, M) - min(N, M) + 1``
 
     See Also
     --------
@@ -1031,9 +1048,10 @@ def oaconvolve(in1, in2, mode="full", axes=None):
         ret, overpart = _split(ret, [-overlap], ax_fft, xp=xp)
         overpart = _split(overpart, [-1], ax_split, xp=xp)[0]
 
-        ret_overpart = _split(ret, [overlap], ax_fft, xp=xp)[0]
-        ret_overpart = _split(ret_overpart, [1], ax_split, xp)[1]
-        ret_overpart += overpart
+        overlap_slice = [slice(None)] * ret.ndim
+        overlap_slice[ax_fft] = slice(0, overlap)
+        overlap_slice[ax_split] = slice(1, None)
+        ret = xpx.at(ret)[tuple(overlap_slice)].add(overpart)
 
     # Reshape back to the correct dimensionality.
     shape_ret = [ret.shape[i] if i not in fft_axes else
@@ -1256,8 +1274,9 @@ def choose_conv_method(in1, in2, mode='full', measure=False):
            The output consists only of those elements that do not
            rely on the zero-padding.
         ``same``
-           The output is the same size as `in1`, centered
+           Output size will be ``N``, the same size as `in1`, centered
            with respect to the 'full' output.
+           Boundary effects may be visible.
     measure : bool, optional
         If True, run and time the convolution of `in1` and `in2` with both
         methods and return the fastest. If False (default), predict the fastest
@@ -1395,8 +1414,9 @@ def convolve(in1, in2, mode='full', method='auto'):
            rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
            must be at least as large as the other in every dimension.
         ``same``
-           The output is the same size as `in1`, centered
+           Output size will be ``N``, the same size as `in1`, centered
            with respect to the 'full' output.
+           Boundary effects may be visible.
     method : str {'auto', 'direct', 'fft'}, optional
         A string indicating which method to use to calculate the convolution.
 
@@ -1417,6 +1437,13 @@ def convolve(in1, in2, mode='full', method='auto'):
     convolve : array
         An N-dimensional array containing a subset of the discrete linear
         convolution of `in1` with `in2`.
+
+        The output size along each axis depends on ``mode``. For input
+        sizes ``N`` and ``M`` along a given axis:
+
+        - ``full`` : ``N + M - 1``
+        - ``same`` : ``N`` (same as the size of `in1`)
+        - ``valid`` : ``max(N, M) - min(N, M) + 1``
 
     Warns
     -----
@@ -2398,7 +2425,7 @@ def deconvolve(signal, divisor):
         rem = num
     else:
         input = xp.zeros(N - D + 1, dtype=xp.float64)
-        input[0] = 1
+        input = xpx.at(input)[0].set(1)
         quot = lfilter(num, den, input)
         rem = num - convolve(den, quot, mode='full')
     return quot, rem
@@ -2516,11 +2543,11 @@ def hilbert(x, N=None, axis=-1):
     Xf = sp_fft.fft(x, N, axis=axis)
     Xf = xp.moveaxis(Xf, axis, -1)
     if N % 2 == 0:
-        Xf[..., 1: N // 2] *= 2.0
-        Xf[..., N // 2 + 1:N] = 0.0
+        Xf = xpx.at(Xf)[..., 1: N // 2].multiply(2.0)
+        Xf = xpx.at(Xf)[..., N // 2 + 1:N].set(0.0)
     else:
-        Xf[..., 1:(N + 1) // 2] *= 2.0
-        Xf[..., (N + 1) // 2:N] = 0.0
+        Xf = xpx.at(Xf)[..., 1: (N + 1) // 2].multiply(2.0)
+        Xf = xpx.at(Xf)[..., (N + 1) // 2:N].set(0.0)
 
     Xf = xp.moveaxis(Xf, -1, axis)
     x = sp_fft.ifft(Xf, axis=axis)
@@ -2698,11 +2725,11 @@ def hilbert2(x, N=None, axes=(-2, -1)):
     k0, k1 = (N[0] + 1) // 2, (N[1] + 1) // 2
 
     if k0 > 1:  # condition k0 > 1 needed for Dask backend
-        Xf[..., 1:k0, :] *= 2.0
+        Xf = xpx.at(Xf)[..., 1:k0, :].multiply(2.0)
     if k1 > 1:  # condition k1 > 1 needed for Dask backend
-        Xf[..., :, 1:k1] *= 2.0
-    Xf[..., k0:, :] = 0.0
-    Xf[..., :, k1:] = 0.0
+        Xf = xpx.at(Xf)[..., :, 1:k1].multiply(2.0)
+    Xf = xpx.at(Xf)[..., k0:, :].set(0.0)
+    Xf = xpx.at(Xf)[..., :, k1:].set(0.0)
 
     Xf = xp.moveaxis(Xf, (-2, -1), axes)
     x = sp_fft.ifft2(Xf, axes=axes)
